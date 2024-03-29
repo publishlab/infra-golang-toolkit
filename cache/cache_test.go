@@ -18,7 +18,7 @@ func BenchmarkCache(b *testing.B) {
 			return []byte(`ok`), nil
 		})
 
-		assert.Nil(b, err)
+		assert.NoError(b, err)
 		assert.Equal(b, "ok", string(data))
 	}
 }
@@ -30,7 +30,7 @@ func TestCacheSingle(t *testing.T) {
 		return []byte(`ok`), nil
 	})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "ok", string(data))
 }
 
@@ -46,7 +46,7 @@ func TestCacheWithOpts(t *testing.T) {
 		},
 	})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, "ok", string(data))
 }
 
@@ -57,7 +57,7 @@ func TestCacheBool(t *testing.T) {
 		return true, nil
 	})
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, data)
 }
 
@@ -72,8 +72,8 @@ func TestCacheHit(t *testing.T) {
 	d1, e1 := generator()
 	d2, e2 := generator()
 
-	assert.Nil(t, e1)
-	assert.Nil(t, e2)
+	assert.NoError(t, e1)
+	assert.NoError(t, e2)
 	assert.Equal(t, d1, d2)
 }
 
@@ -88,8 +88,8 @@ func TestCacheMiss(t *testing.T) {
 	d1, e1 := generator()
 	d2, e2 := generator()
 
-	assert.Nil(t, e1)
-	assert.Nil(t, e2)
+	assert.NoError(t, e1)
+	assert.NoError(t, e2)
 	assert.NotEqual(t, d1, d2)
 }
 
@@ -104,8 +104,8 @@ func TestCacheGrace(t *testing.T) {
 	d1, e1 := generator()
 	d2, e2 := generator()
 
-	assert.Nil(t, e1)
-	assert.Nil(t, e2)
+	assert.NoError(t, e1)
+	assert.NoError(t, e2)
 	assert.Equal(t, d1, d2)
 }
 
@@ -121,9 +121,9 @@ func TestCachePurgeExpired(t *testing.T) {
 	_, e2 := generator("b")
 	_, e3 := generator("c")
 
-	assert.Nil(t, e1)
-	assert.Nil(t, e2)
-	assert.Nil(t, e3)
+	assert.NoError(t, e1)
+	assert.NoError(t, e2)
+	assert.NoError(t, e3)
 
 	purged := cache.purgeExpiredItems()
 	assert.Equal(t, 3, purged)
@@ -136,7 +136,7 @@ func TestCacheError(t *testing.T) {
 		return nil, fmt.Errorf("oops")
 	})
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, "oops", err.Error())
 	assert.Nil(t, data)
 }
@@ -156,9 +156,35 @@ func TestCacheMulti(t *testing.T) {
 				return []byte(`ok`), nil
 			})
 
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, "ok", string(data))
 		}()
+	}
+
+	wg.Wait()
+}
+
+func TestCacheRace(t *testing.T) {
+	var wg sync.WaitGroup
+	cache := New[int64](time.Minute, time.Minute, time.Hour)
+	generator := func(key int) (int64, error) {
+		return cache.Get(fmt.Sprintf("%d", key), func() (int64, error) {
+			return rand.Int63(), nil
+		})
+	}
+
+	for i := 0; i <= 15; i++ {
+		key := rand.Int()
+
+		for x := 0; x <= 30; x++ {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+				_, err := generator(key)
+				assert.NoError(t, err)
+			}()
+		}
 	}
 
 	wg.Wait()

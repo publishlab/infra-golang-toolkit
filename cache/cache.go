@@ -18,11 +18,16 @@ type Cache[T any] struct {
 	items        map[string]*CacheItem[T]
 }
 
+type CacheChan struct {
+	signal chan bool
+	once   sync.Once
+}
+
 type CacheItem[T any] struct {
 	data    T
 	err     error
-	cond    sync.Cond
 	working bool
+	ready   *CacheChan
 	created int64
 	expires int64
 	banned  int64
@@ -76,12 +81,11 @@ func (c *Cache[T]) write(opts *CacheGetOpts[T], data T, err error) {
 		c.purgeExpiredItems()
 	}
 
-	// Item is ready, release lock and broadcast to all readers
+	// Item is ready, release lock and broadcast to channel
 	c.mu.Unlock()
-
-	item.cond.L.Lock()
-	item.cond.Broadcast()
-	item.cond.L.Unlock()
+	item.ready.once.Do(func() {
+		close(item.ready.signal)
+	})
 }
 
 //
@@ -123,8 +127,10 @@ func (c *Cache[T]) createCacheItem(opts *CacheGetOpts[T]) *CacheItem[T] {
 
 	// Create placeholder object
 	item = &CacheItem[T]{
-		cond:    *sync.NewCond(&sync.Mutex{}),
 		working: true,
+		ready: &CacheChan{
+			signal: make(chan bool),
+		},
 	}
 
 	c.items[opts.Key] = item
@@ -153,8 +159,12 @@ func (c *Cache[T]) updateCacheItem(opts *CacheGetOpts[T]) {
 		return
 	}
 
-	// Update working flag
+	// Update working flag, open new channel
 	c.items[opts.Key].working = true
+	c.items[opts.Key].ready = &CacheChan{
+		signal: make(chan bool),
+	}
+
 	c.mu.Unlock()
 
 	// Data generator
@@ -212,9 +222,7 @@ func (c *Cache[T]) GetWithOpts(opts *CacheGetOpts[T]) (T, error) {
 	}
 
 	// Wait for data to be generated
-	item.cond.L.Lock()
-	item.cond.Wait()
-	item.cond.L.Unlock()
+	<-item.ready.signal
 
 	// Read new data
 	c.mu.RLock()
