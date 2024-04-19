@@ -14,7 +14,7 @@ func TestGetRadbPrefixesByAsn(t *testing.T) {
 	}
 
 	for _, asn := range tests {
-		resp, err := GetRadbPrefixesByAsn(asn)
+		resp, err := GetRadbPrefixesByAsn(&GetRadbPrefixesByAsnOpts{Asn: asn})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, resp.IPv4)
 		assert.NotEmpty(t, resp.IPv6)
@@ -22,7 +22,7 @@ func TestGetRadbPrefixesByAsn(t *testing.T) {
 }
 
 func TestGetRadbPrefixesByAsnError(t *testing.T) {
-	resp, err := GetRadbPrefixesByAsn("AS0")
+	resp, err := GetRadbPrefixesByAsn(&GetRadbPrefixesByAsnOpts{Asn: "AS0"})
 	assert.NoError(t, err)
 	assert.Empty(t, resp.IPv4)
 	assert.Empty(t, resp.IPv6)

@@ -7,6 +7,7 @@ package whois
 import (
 	"fmt"
 	"regexp"
+	"time"
 )
 
 var (
@@ -15,20 +16,30 @@ var (
 )
 
 type RadbPrefixCollection struct {
-	IPv4 []string
-	IPv6 []string
+	IPv4 [][]byte
+	IPv6 [][]byte
 }
 
-func GetRadbPrefixesByAsn(asn string) (*RadbPrefixCollection, error) {
+type GetRadbPrefixesByAsnOpts struct {
+	Asn     string
+	Timeout time.Duration
+}
+
+func GetRadbPrefixesByAsn(opts *GetRadbPrefixesByAsnOpts) (*RadbPrefixCollection, error) {
 	result := &RadbPrefixCollection{}
-	whois, err := WhoisQuery("whois.radb.net", 43, fmt.Sprintf("-i origin %s", asn))
+	whois, err := WhoisQuery(&WhoisQueryOpts{
+		Hostname: "whois.radb.net",
+		Query:    fmt.Sprintf("-i origin %s", opts.Asn),
+		Timeout:  opts.Timeout,
+	})
+
 	if err != nil {
 		return result, err
 	}
 
 	// Grep through response for ipv4 and ipv6 prefixes
-	matches4 := radbRoute4Re.FindAllStringSubmatch(whois, -1)
-	matches6 := radbRoute6Re.FindAllStringSubmatch(whois, -1)
+	matches4 := radbRoute4Re.FindAllSubmatch(whois, -1)
+	matches6 := radbRoute6Re.FindAllSubmatch(whois, -1)
 
 	for _, match := range matches4 {
 		result.IPv4 = append(result.IPv4, match[1])

@@ -11,31 +11,47 @@ import (
 	"time"
 )
 
-func WhoisQuery(host string, port int, query string) (string, error) {
-	con, err := net.Dial("tcp", net.JoinHostPort(host, fmt.Sprint(port)))
+type WhoisQueryOpts struct {
+	Hostname string
+	Port     int
+	Query    string
+	Timeout  time.Duration
+}
+
+func WhoisQuery(opts *WhoisQueryOpts) ([]byte, error) {
+	if opts.Port == 0 {
+		opts.Port = 43
+	}
+
+	if opts.Timeout == 0 {
+		opts.Timeout = time.Second * 10
+	}
+
+	// Open connection
+	con, err := net.Dial("tcp", net.JoinHostPort(opts.Hostname, fmt.Sprint(opts.Port)))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	defer con.Close()
 
 	// Timeout
-	err = con.SetDeadline(time.Now().Add(time.Second * 10))
+	err = con.SetDeadline(time.Now().Add(opts.Timeout))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Write query
-	_, err = con.Write([]byte(query + "\r\n"))
+	_, err = con.Write([]byte(opts.Query + "\r\n"))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Read response
 	resp, err := io.ReadAll(con)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return string(resp), nil
+	return resp, nil
 }
