@@ -18,9 +18,10 @@ type Cache[T any] struct {
 	items        map[string]*CacheItem[T]
 }
 
-type CacheChan struct {
-	signal chan bool
-	once   sync.Once
+type CacheOpts struct {
+	DefaultTTL   time.Duration
+	DefaultGrace time.Duration
+	GCInterval   time.Duration
 }
 
 type CacheItem[T any] struct {
@@ -33,6 +34,11 @@ type CacheItem[T any] struct {
 	banned  int64
 }
 
+type CacheChan struct {
+	signal chan bool
+	once   sync.Once
+}
+
 type CacheGetOpts[T any] struct {
 	Key       string
 	TTL       int64
@@ -40,20 +46,33 @@ type CacheGetOpts[T any] struct {
 	Generator func() (T, error)
 }
 
+var CacheOptsDefaults = &CacheOpts{
+	DefaultTTL:   time.Minute,
+	DefaultGrace: 0,
+	GCInterval:   time.Hour,
+}
+
 //
 // Initialize new cache instance
 //
 
-func New[T any](defaultTTL time.Duration, defaultGrace time.Duration, gcInterval time.Duration) *Cache[T] {
-	c := &Cache[T]{
-		defaultTTL:   defaultTTL.Nanoseconds(),
-		defaultGrace: defaultGrace.Nanoseconds(),
-		gcInterval:   gcInterval.Nanoseconds(),
+func New[T any]() *Cache[T] {
+	return NewWithOpts[T](CacheOptsDefaults)
+}
+
+func NewWithOpts[T any](opts *CacheOpts) *Cache[T] {
+	// We always want garbage collection
+	if opts.GCInterval == 0 {
+		opts.GCInterval = CacheOptsDefaults.GCInterval
+	}
+
+	return &Cache[T]{
+		defaultTTL:   opts.DefaultTTL.Nanoseconds(),
+		defaultGrace: opts.DefaultGrace.Nanoseconds(),
+		gcInterval:   opts.GCInterval.Nanoseconds(),
 		lastGcTime:   time.Now().UnixNano(),
 		items:        make(map[string]*CacheItem[T]),
 	}
-
-	return c
 }
 
 //

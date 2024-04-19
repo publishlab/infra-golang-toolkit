@@ -11,7 +11,7 @@ import (
 )
 
 func BenchmarkCache(b *testing.B) {
-	cache := New[[]byte](time.Minute, time.Minute, time.Hour)
+	cache := New[[]byte]()
 
 	for i := 0; i < b.N; i++ {
 		data, err := cache.Get("test", func() ([]byte, error) {
@@ -24,7 +24,7 @@ func BenchmarkCache(b *testing.B) {
 }
 
 func TestCacheSingle(t *testing.T) {
-	cache := New[[]byte](time.Minute, time.Minute, time.Hour)
+	cache := New[[]byte]()
 
 	data, err := cache.Get("test", func() ([]byte, error) {
 		return []byte(`ok`), nil
@@ -35,7 +35,22 @@ func TestCacheSingle(t *testing.T) {
 }
 
 func TestCacheWithOpts(t *testing.T) {
-	cache := New[[]byte](time.Minute, time.Minute, time.Hour)
+	cache := NewWithOpts[[]byte](&CacheOpts{
+		DefaultTTL:   time.Minute,
+		DefaultGrace: time.Minute,
+		GCInterval:   time.Hour,
+	})
+
+	data, err := cache.Get("test", func() ([]byte, error) {
+		return []byte(`ok`), nil
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", string(data))
+}
+
+func TestCacheGetWithOpts(t *testing.T) {
+	cache := New[[]byte]()
 
 	data, err := cache.GetWithOpts(&CacheGetOpts[[]byte]{
 		Key:   "test",
@@ -51,7 +66,7 @@ func TestCacheWithOpts(t *testing.T) {
 }
 
 func TestCacheBool(t *testing.T) {
-	cache := New[bool](time.Minute, time.Minute, time.Hour)
+	cache := New[bool]()
 
 	data, err := cache.Get("test", func() (bool, error) {
 		return true, nil
@@ -62,7 +77,7 @@ func TestCacheBool(t *testing.T) {
 }
 
 func TestCacheHit(t *testing.T) {
-	cache := New[int64](time.Minute, time.Minute, time.Hour)
+	cache := New[int64]()
 	generator := func() (int64, error) {
 		return cache.Get("test", func() (int64, error) {
 			return rand.Int63(), nil
@@ -78,7 +93,10 @@ func TestCacheHit(t *testing.T) {
 }
 
 func TestCacheMiss(t *testing.T) {
-	cache := New[int64](0, 0, time.Hour)
+	cache := NewWithOpts[int64](&CacheOpts{
+		DefaultTTL: 0,
+	})
+
 	generator := func() (int64, error) {
 		return cache.Get("test", func() (int64, error) {
 			return rand.Int63(), nil
@@ -94,7 +112,11 @@ func TestCacheMiss(t *testing.T) {
 }
 
 func TestCacheGrace(t *testing.T) {
-	cache := New[int64](0, time.Minute, time.Hour)
+	cache := NewWithOpts[int64](&CacheOpts{
+		DefaultTTL:   0,
+		DefaultGrace: time.Minute,
+	})
+
 	generator := func() (int64, error) {
 		return cache.Get("test", func() (int64, error) {
 			return rand.Int63(), nil
@@ -110,7 +132,10 @@ func TestCacheGrace(t *testing.T) {
 }
 
 func TestCachePurgeExpired(t *testing.T) {
-	cache := New[int64](0, 0, time.Hour)
+	cache := NewWithOpts[int64](&CacheOpts{
+		DefaultTTL: 0,
+	})
+
 	generator := func(k string) (int64, error) {
 		return cache.Get(k, func() (int64, error) {
 			return rand.Int63(), nil
@@ -130,7 +155,7 @@ func TestCachePurgeExpired(t *testing.T) {
 }
 
 func TestCacheError(t *testing.T) {
-	cache := New[[]byte](time.Minute, time.Minute, time.Hour)
+	cache := New[[]byte]()
 
 	data, err := cache.Get("test", func() ([]byte, error) {
 		return nil, fmt.Errorf("oops")
@@ -143,7 +168,7 @@ func TestCacheError(t *testing.T) {
 
 func TestCacheMulti(t *testing.T) {
 	var wg sync.WaitGroup
-	cache := New[[]byte](time.Minute, time.Minute, time.Hour)
+	cache := New[[]byte]()
 
 	for i := 0; i <= 15; i++ {
 		wg.Add(1)
@@ -166,7 +191,7 @@ func TestCacheMulti(t *testing.T) {
 
 func TestCacheRace(t *testing.T) {
 	var wg sync.WaitGroup
-	cache := New[int64](time.Minute, time.Minute, time.Hour)
+	cache := New[int64]()
 	generator := func(key int) (int64, error) {
 		return cache.Get(fmt.Sprintf("%d", key), func() (int64, error) {
 			return rand.Int63(), nil
