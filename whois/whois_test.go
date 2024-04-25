@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWhoisQuery(t *testing.T) {
-	data, err := WhoisQuery(&WhoisQueryOpts{
+func TestQuery(t *testing.T) {
+	data, err := Query(&QueryOpts{
 		Hostname: "whois.norid.no",
 		Port:     43,
 		Query:    "norid.no",
@@ -18,7 +18,7 @@ func TestWhoisQuery(t *testing.T) {
 	assert.NotEmpty(t, data)
 	assert.NoError(t, err)
 
-	data, err = WhoisQuery(&WhoisQueryOpts{
+	data, err = Query(&QueryOpts{
 		Hostname: "whois.radb.net",
 		Query:    "-i origin AS32934",
 	})
@@ -27,8 +27,8 @@ func TestWhoisQuery(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestWhoisQueryError(t *testing.T) {
-	data, err := WhoisQuery(&WhoisQueryOpts{
+func TestQueryError(t *testing.T) {
+	data, err := Query(&QueryOpts{
 		Hostname: "whois.example.org",
 		Query:    "example.org",
 	})

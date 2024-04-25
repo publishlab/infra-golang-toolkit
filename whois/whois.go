@@ -11,14 +11,14 @@ import (
 	"time"
 )
 
-type WhoisQueryOpts struct {
+type QueryOpts struct {
 	Hostname string
 	Port     int
 	Query    string
 	Timeout  time.Duration
 }
 
-func WhoisQuery(opts *WhoisQueryOpts) ([]byte, error) {
+func Query(opts *QueryOpts) ([]byte, error) {
 	if opts.Port == 0 {
 		opts.Port = 43
 	}

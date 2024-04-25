@@ -15,38 +15,38 @@ type Cache[T any] struct {
 	gcInterval   int64
 	lastGcTime   int64
 	mu           sync.RWMutex
-	items        map[string]*CacheItem[T]
+	items        map[string]*Item[T]
 }
 
-type CacheOpts struct {
+type Opts struct {
 	DefaultTTL   time.Duration
 	DefaultGrace time.Duration
 	GCInterval   time.Duration
 }
 
-type CacheItem[T any] struct {
+type Item[T any] struct {
 	data    T
 	err     error
 	working bool
-	ready   *CacheChan
+	ready   *Channel
 	created int64
 	expires int64
 	banned  int64
 }
 
-type CacheChan struct {
+type Channel struct {
 	signal chan bool
 	once   sync.Once
 }
 
-type CacheGetOpts[T any] struct {
+type GetOpts[T any] struct {
 	Key       string
 	TTL       int64
 	Grace     int64
 	Generator func() (T, error)
 }
 
-var CacheOptsDefaults = &CacheOpts{
+var DefaultOpts = &Opts{
 	DefaultTTL:   time.Minute,
 	DefaultGrace: 0,
 	GCInterval:   time.Hour,
@@ -57,13 +57,13 @@ var CacheOptsDefaults = &CacheOpts{
 //
 
 func New[T any]() *Cache[T] {
-	return NewWithOpts[T](CacheOptsDefaults)
+	return NewWithOpts[T](DefaultOpts)
 }
 
-func NewWithOpts[T any](opts *CacheOpts) *Cache[T] {
-	// We always want garbage collection
+func NewWithOpts[T any](opts *Opts) *Cache[T] {
+	// We always want some garbage collection
 	if opts.GCInterval == 0 {
-		opts.GCInterval = CacheOptsDefaults.GCInterval
+		opts.GCInterval = DefaultOpts.GCInterval
 	}
 
 	return &Cache[T]{
@@ -71,7 +71,7 @@ func NewWithOpts[T any](opts *CacheOpts) *Cache[T] {
 		defaultGrace: opts.DefaultGrace.Nanoseconds(),
 		gcInterval:   opts.GCInterval.Nanoseconds(),
 		lastGcTime:   time.Now().UnixNano(),
-		items:        make(map[string]*CacheItem[T]),
+		items:        make(map[string]*Item[T]),
 	}
 }
 
@@ -79,7 +79,7 @@ func NewWithOpts[T any](opts *CacheOpts) *Cache[T] {
 // Internal cache data writer
 //
 
-func (c *Cache[T]) write(opts *CacheGetOpts[T], data T, err error) {
+func (c *Cache[T]) write(opts *GetOpts[T], data T, err error) {
 	c.mu.Lock()
 	now := time.Now().UnixNano()
 	item := c.items[opts.Key]
@@ -134,7 +134,7 @@ func (c *Cache[T]) purgeExpiredItems() int {
 // Initialize fresh cache item
 //
 
-func (c *Cache[T]) createCacheItem(opts *CacheGetOpts[T]) *CacheItem[T] {
+func (c *Cache[T]) createCacheItem(opts *GetOpts[T]) *Item[T] {
 	c.mu.Lock()
 	item, exists := c.items[opts.Key]
 
@@ -145,9 +145,9 @@ func (c *Cache[T]) createCacheItem(opts *CacheGetOpts[T]) *CacheItem[T] {
 	}
 
 	// Create placeholder object
-	item = &CacheItem[T]{
+	item = &Item[T]{
 		working: true,
-		ready: &CacheChan{
+		ready: &Channel{
 			signal: make(chan bool),
 		},
 	}
@@ -168,7 +168,7 @@ func (c *Cache[T]) createCacheItem(opts *CacheGetOpts[T]) *CacheItem[T] {
 // Refresh data for existing cache item
 //
 
-func (c *Cache[T]) updateCacheItem(opts *CacheGetOpts[T]) {
+func (c *Cache[T]) updateCacheItem(opts *GetOpts[T]) {
 	c.mu.Lock()
 	item := c.items[opts.Key]
 
@@ -180,7 +180,7 @@ func (c *Cache[T]) updateCacheItem(opts *CacheGetOpts[T]) {
 
 	// Update working flag, open new channel
 	c.items[opts.Key].working = true
-	c.items[opts.Key].ready = &CacheChan{
+	c.items[opts.Key].ready = &Channel{
 		signal: make(chan bool),
 	}
 
@@ -197,7 +197,7 @@ func (c *Cache[T]) updateCacheItem(opts *CacheGetOpts[T]) {
 // Cache getter with opts
 //
 
-func (c *Cache[T]) GetWithOpts(opts *CacheGetOpts[T]) (T, error) {
+func (c *Cache[T]) GetWithOpts(opts *GetOpts[T]) (T, error) {
 	c.mu.RLock()
 	item, exists := c.items[opts.Key]
 	now := time.Now().UnixNano()
@@ -258,7 +258,7 @@ func (c *Cache[T]) GetWithOpts(opts *CacheGetOpts[T]) (T, error) {
 //
 
 func (c *Cache[T]) Get(key string, generator func() (T, error)) (T, error) {
-	return c.GetWithOpts(&CacheGetOpts[T]{
+	return c.GetWithOpts(&GetOpts[T]{
 		Key:       key,
 		TTL:       c.defaultTTL,
 		Grace:     c.defaultGrace,

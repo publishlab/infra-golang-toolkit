@@ -20,14 +20,14 @@ type RadbPrefixCollection struct {
 	IPv6 [][]byte
 }
 
-type GetRadbPrefixesByAsnOpts struct {
+type RadbPrefixesByAsnOpts struct {
 	Asn     string
 	Timeout time.Duration
 }
 
-func GetRadbPrefixesByAsn(opts *GetRadbPrefixesByAsnOpts) (*RadbPrefixCollection, error) {
+func RadbPrefixesByAsn(opts *RadbPrefixesByAsnOpts) (*RadbPrefixCollection, error) {
 	result := &RadbPrefixCollection{}
-	whois, err := WhoisQuery(&WhoisQueryOpts{
+	whois, err := Query(&QueryOpts{
 		Hostname: "whois.radb.net",
 		Query:    fmt.Sprintf("-i origin %s", opts.Asn),
 		Timeout:  opts.Timeout,

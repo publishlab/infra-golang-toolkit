@@ -35,7 +35,7 @@ func TestCacheSingle(t *testing.T) {
 }
 
 func TestCacheWithOpts(t *testing.T) {
-	cache := NewWithOpts[[]byte](&CacheOpts{
+	cache := NewWithOpts[[]byte](&Opts{
 		DefaultTTL:   time.Minute,
 		DefaultGrace: time.Minute,
 		GCInterval:   time.Hour,
@@ -52,7 +52,7 @@ func TestCacheWithOpts(t *testing.T) {
 func TestCacheGetWithOpts(t *testing.T) {
 	cache := New[[]byte]()
 
-	data, err := cache.GetWithOpts(&CacheGetOpts[[]byte]{
+	data, err := cache.GetWithOpts(&GetOpts[[]byte]{
 		Key:   "test",
 		TTL:   time.Minute.Nanoseconds(),
 		Grace: time.Minute.Nanoseconds(),
@@ -93,7 +93,7 @@ func TestCacheHit(t *testing.T) {
 }
 
 func TestCacheMiss(t *testing.T) {
-	cache := NewWithOpts[int64](&CacheOpts{
+	cache := NewWithOpts[int64](&Opts{
 		DefaultTTL: 0,
 	})
 
@@ -112,7 +112,7 @@ func TestCacheMiss(t *testing.T) {
 }
 
 func TestCacheGrace(t *testing.T) {
-	cache := NewWithOpts[int64](&CacheOpts{
+	cache := NewWithOpts[int64](&Opts{
 		DefaultTTL:   0,
 		DefaultGrace: time.Minute,
 	})
@@ -132,7 +132,7 @@ func TestCacheGrace(t *testing.T) {
 }
 
 func TestCachePurgeExpired(t *testing.T) {
-	cache := NewWithOpts[int64](&CacheOpts{
+	cache := NewWithOpts[int64](&Opts{
 		DefaultTTL: 0,
 	})
 
