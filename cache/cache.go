@@ -46,6 +46,13 @@ type GetOpts[T any] struct {
 	Generator func() (T, error)
 }
 
+type SetOpts[T any] struct {
+	Key   string
+	TTL   int64
+	Grace int64
+	Data  T
+}
+
 var DefaultOpts = &Opts{
 	DefaultTTL:   time.Minute,
 	DefaultGrace: 0,
@@ -263,5 +270,47 @@ func (c *Cache[T]) Get(key string, generator func() (T, error)) (T, error) {
 		TTL:       c.defaultTTL,
 		Grace:     c.defaultGrace,
 		Generator: generator,
+	})
+}
+
+//
+// Cache setter with opts
+//
+
+func (c *Cache[T]) SetWithOpts(opts *SetOpts[T]) {
+	getOpts := &GetOpts[T]{
+		Key:   opts.Key,
+		TTL:   opts.TTL,
+		Grace: opts.Grace,
+		Generator: func() (T, error) {
+			return opts.Data, nil
+		},
+	}
+
+	c.mu.RLock()
+	item, exists := c.items[opts.Key]
+	c.mu.RUnlock()
+
+	// Update data if container exists, otherwise create
+	if exists {
+		c.updateCacheItem(getOpts)
+	} else {
+		item = c.createCacheItem(getOpts)
+	}
+
+	// Wait for data to be generated
+	<-item.ready.signal
+}
+
+//
+// Cache setter with default opts
+//
+
+func (c *Cache[T]) Set(key string, data T) {
+	c.SetWithOpts(&SetOpts[T]{
+		Key:   key,
+		Data:  data,
+		TTL:   c.defaultTTL,
+		Grace: c.defaultGrace,
 	})
 }

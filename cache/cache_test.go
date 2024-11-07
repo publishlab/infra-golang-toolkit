@@ -131,6 +131,61 @@ func TestCacheGrace(t *testing.T) {
 	assert.Equal(t, d1, d2)
 }
 
+func TestCacheSet(t *testing.T) {
+	cache := New[int64]()
+	cache.Set("test", 42)
+
+	data, err := cache.Get("test", func() (int64, error) {
+		return 123, nil
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, int64(42), data)
+}
+
+func TestCacheSetUpdate(t *testing.T) {
+	cache := New[int64]()
+	generator := func() (int64, error) {
+		return cache.Get("test", func() (int64, error) {
+			return 123, nil
+		})
+	}
+
+	d1, e1 := generator()
+	assert.NoError(t, e1)
+	assert.Equal(t, int64(123), d1)
+
+	cache.Set("test", 42)
+
+	d2, e2 := generator()
+	assert.NoError(t, e2)
+	assert.Equal(t, int64(42), d2)
+}
+
+func TestCacheSetWithOpts(t *testing.T) {
+	cache := New[int64]()
+	generator := func() (int64, error) {
+		return cache.Get("test", func() (int64, error) {
+			return 123, nil
+		})
+	}
+
+	d1, e1 := generator()
+	assert.NoError(t, e1)
+	assert.Equal(t, int64(123), d1)
+
+	cache.SetWithOpts(&SetOpts[int64]{
+		Key:   "test",
+		Data:  42,
+		TTL:   time.Minute.Nanoseconds(),
+		Grace: time.Minute.Nanoseconds(),
+	})
+
+	d2, e2 := generator()
+	assert.NoError(t, e2)
+	assert.Equal(t, int64(42), d2)
+}
+
 func TestCachePurgeExpired(t *testing.T) {
 	cache := NewWithOpts[int64](&Opts{
 		DefaultTTL: 0,
