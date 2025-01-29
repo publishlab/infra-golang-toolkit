@@ -27,3 +27,14 @@ func TestEcsTaskArnToClusterArnErr(t *testing.T) {
 	result := EcsTaskArnToClusterArn(arn)
 	assert.Equal(t, arn, result)
 }
+
+func TestCloudFrontDistributionIdFromArn(t *testing.T) {
+	result := CloudFrontDistributionIdFromArn("arn:aws:cloudfront::1234567890:distribution/E1234567890ABC")
+	assert.Equal(t, "E1234567890ABC", result)
+}
+
+func TestCloudFrontDistributionIdFromArnErr(t *testing.T) {
+	arn := "invalid-arn"
+	result := CloudFrontDistributionIdFromArn(arn)
+	assert.Equal(t, arn, result)
+}
