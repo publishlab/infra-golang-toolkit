@@ -1,2 +1,8 @@
-run:
-  timeout: 30m
+# https://golangci-lint.run/usage/configuration/
+# https://golangci-lint.run/usage/false-positives/
+version: "2"
+
+linters:
+  exclusions:
+    presets:
+      - std-error-handling
