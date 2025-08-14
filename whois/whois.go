@@ -16,17 +16,10 @@ type QueryOpts struct {
 	Port     int
 	Query    string
 	Timeout  time.Duration
+	Attempts int
 }
 
-func Query(opts *QueryOpts) ([]byte, error) {
-	if opts.Port == 0 {
-		opts.Port = 43
-	}
-
-	if opts.Timeout == 0 {
-		opts.Timeout = time.Second * 10
-	}
-
+func queryHandler(opts *QueryOpts) ([]byte, error) {
 	// Open connection
 	con, err := net.Dial("tcp", net.JoinHostPort(opts.Hostname, fmt.Sprint(opts.Port)))
 	if err != nil {
@@ -54,4 +47,34 @@ func Query(opts *QueryOpts) ([]byte, error) {
 	}
 
 	return resp, nil
+}
+
+func queryLoop(opts *QueryOpts, attempt int) ([]byte, error) {
+	whois, err := queryHandler(opts)
+
+	// Retry on failure within attempt threshold
+	if err != nil {
+		if attempt < opts.Attempts {
+			time.Sleep(time.Second * time.Duration(attempt))
+			return queryLoop(opts, (attempt + 1))
+		}
+	}
+
+	return whois, err
+}
+
+func Query(opts *QueryOpts) ([]byte, error) {
+	if opts.Port == 0 {
+		opts.Port = 43
+	}
+
+	if opts.Timeout == 0 {
+		opts.Timeout = time.Second * 10
+	}
+
+	if opts.Attempts == 0 {
+		opts.Attempts = 5
+	}
+
+	return queryLoop(opts, 1)
 }
