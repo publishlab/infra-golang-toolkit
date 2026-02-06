@@ -16,6 +16,25 @@ type TestClaims struct {
 var (
 	goodSecret = []byte("correct-secret-key")
 	badSecret  = []byte("wrong-secret-key")
+
+	rsaPublicKey = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAukKbkMe3rGmzaArHUC49
+3abT2jR0wv3GsLzfaymrBXqCQqYIcYwjf3QxdRKXaPRVKTV8CcGKvz79Z7i7r2G3
+xBHS/Id5Qb0fybPd4bx33yHwRIBzfJvdl/avMPuqbnY41QCub+5k3aYR7h0XU/L9
+qCUznMLc6Ve8rUFAjBt9+L+ePKPVo+R0l3m89rP6itJ3hyrckzJjGc4Nvv66jfwg
+1vllClX2macXJ+l96wlMDEiQ3OXwesNzx+4jNqOKPBKvZTlk4oqAD7B9JUjtfBiu
+AwrXTSgTB/AMBafaX+WwJPHMLbEPelEmlyJkOQF1mHDRKcd/Iz9vUxMrBWIzeu5e
+cwIDAQAB
+-----END PUBLIC KEY-----`
+
+	ecdsaPublicKey = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzvV3K2XH6YElbSKS/fts01w98JMg
+9/tpd7PIrXt67MAXtDCs6WULbehJrgg6OhwirxkkpiVFCU/PGCe3EqkHmw==
+-----END PUBLIC KEY-----`
+
+	ed25519PublicKey = `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEA2+VRi4Jnwi7qidWyxa/JdhwT+3bhCy1YtFxu2dcKHVE=
+-----END PUBLIC KEY-----`
 )
 
 func createTestAuthz(claims jwt.Claims, secret []byte) string {
@@ -29,6 +48,10 @@ func testKeyFunc(secret []byte) jwt.Keyfunc {
 		return secret, nil
 	}
 }
+
+//
+// Validate tests
+//
 
 func TestValidateToken(t *testing.T) {
 	now := time.Now()
@@ -53,7 +76,7 @@ func TestValidateToken(t *testing.T) {
 	assert.True(t, token.Valid)
 }
 
-func TestInvalidAuthorizations(t *testing.T) {
+func TestValidateInvalidAuthorizations(t *testing.T) {
 	tests := []string{
 		"",
 		"token-without-bearer",
@@ -74,7 +97,7 @@ func TestInvalidAuthorizations(t *testing.T) {
 	}
 }
 
-func TestInvalidTokenFormat(t *testing.T) {
+func TestValidateInvalidTokenFormat(t *testing.T) {
 	token, err := Validate[TestClaims](&ValidateOpts{
 		Authz:   "Bearer invalid.token.format",
 		KeyFunc: testKeyFunc(goodSecret),
@@ -84,7 +107,7 @@ func TestInvalidTokenFormat(t *testing.T) {
 	assert.Nil(t, token)
 }
 
-func TestInvalidSignature(t *testing.T) {
+func TestValidateInvalidSignature(t *testing.T) {
 	now := time.Now()
 	claims := &TestClaims{
 		CustomClaim: "test-value",
@@ -103,7 +126,7 @@ func TestInvalidSignature(t *testing.T) {
 	assert.Nil(t, token)
 }
 
-func TestExpiredToken(t *testing.T) {
+func TestValidateExpiredToken(t *testing.T) {
 	now := time.Now()
 	claims := &TestClaims{
 		CustomClaim: "test-value",
@@ -122,7 +145,7 @@ func TestExpiredToken(t *testing.T) {
 	assert.Nil(t, token)
 }
 
-func TestPrematureToken(t *testing.T) {
+func TestValidatePrematureToken(t *testing.T) {
 	now := time.Now()
 	claims := &TestClaims{
 		CustomClaim: "test-value",
@@ -142,7 +165,7 @@ func TestPrematureToken(t *testing.T) {
 	assert.Nil(t, token)
 }
 
-func TestAssertSubject(t *testing.T) {
+func TestValidateAssertSubject(t *testing.T) {
 	now := time.Now()
 
 	t.Run("valid subject", func(t *testing.T) {
@@ -206,7 +229,7 @@ func TestAssertSubject(t *testing.T) {
 	})
 }
 
-func TestAssertAudience(t *testing.T) {
+func TestValidateAssertAudience(t *testing.T) {
 	now := time.Now()
 
 	t.Run("valid single audience", func(t *testing.T) {
@@ -290,7 +313,7 @@ func TestAssertAudience(t *testing.T) {
 	})
 }
 
-func TestMaxExpiresAt(t *testing.T) {
+func TestValidateMaxExpiresAt(t *testing.T) {
 	now := time.Now()
 
 	t.Run("valid expiration", func(t *testing.T) {
@@ -351,7 +374,7 @@ func TestMaxExpiresAt(t *testing.T) {
 	})
 }
 
-func TestMinIssuedAt(t *testing.T) {
+func TestValidateMinIssuedAt(t *testing.T) {
 	now := time.Now()
 
 	t.Run("valid issued at", func(t *testing.T) {
@@ -415,7 +438,7 @@ func TestMinIssuedAt(t *testing.T) {
 	})
 }
 
-func TestMinNotBefore(t *testing.T) {
+func TestValidateMinNotBefore(t *testing.T) {
 	now := time.Now()
 
 	t.Run("valid not before", func(t *testing.T) {
@@ -479,7 +502,7 @@ func TestMinNotBefore(t *testing.T) {
 	})
 }
 
-func TestAllAssertions(t *testing.T) {
+func TestValidateAllAssertions(t *testing.T) {
 	now := time.Now()
 	claims := &TestClaims{
 		CustomClaim: "test-value",
@@ -507,7 +530,7 @@ func TestAllAssertions(t *testing.T) {
 	assert.True(t, token.Valid)
 }
 
-func TestAllClaims(t *testing.T) {
+func TestValidateAllClaims(t *testing.T) {
 	now := time.Now()
 	claims := &TestClaims{
 		CustomClaim: "test-value",
@@ -539,7 +562,7 @@ func TestAllClaims(t *testing.T) {
 	assert.Contains(t, parsedClaims.Audience, "kake")
 }
 
-func TestKeyFuncError(t *testing.T) {
+func TestValidateKeyFuncError(t *testing.T) {
 	now := time.Now()
 	claims := &TestClaims{
 		CustomClaim: "test-value",
@@ -559,7 +582,7 @@ func TestKeyFuncError(t *testing.T) {
 	assert.Nil(t, token)
 }
 
-func TestKeyFuncNil(t *testing.T) {
+func TestValidateKeyFuncNil(t *testing.T) {
 	now := time.Now()
 	claims := &TestClaims{
 		CustomClaim: "test-value",
@@ -575,4 +598,136 @@ func TestKeyFuncNil(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, token)
+}
+
+//
+// ParsePublicKey tests
+//
+
+func TestParsePublicKey(t *testing.T) {
+	tests := []struct {
+		name string
+		pem  []byte
+	}{
+		{"rsa key", []byte(rsaPublicKey)},
+		{"ecdsa key", []byte(ecdsaPublicKey)},
+		{"ed25519 key", []byte(ed25519PublicKey)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := ParsePublicKey(tt.pem)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, parsed)
+			assert.NotEmpty(t, parsed.Kid)
+			assert.NotNil(t, parsed.Key)
+
+			// Verify kid
+			assert.Len(t, parsed.Kid, 64)
+			assert.Regexp(t, "^[0-9a-f]+$", parsed.Kid)
+		})
+	}
+
+	t.Run("invalid pem", func(t *testing.T) {
+		parsed, err := ParsePublicKey([]byte("not a valid PEM block"))
+
+		assert.Error(t, err)
+		assert.Nil(t, parsed)
+		assert.Contains(t, err.Error(), "failed to decode pem block")
+	})
+
+	t.Run("empty input", func(t *testing.T) {
+		parsed, err := ParsePublicKey([]byte(""))
+
+		assert.Error(t, err)
+		assert.Nil(t, parsed)
+		assert.Contains(t, err.Error(), "failed to decode pem block")
+	})
+
+	t.Run("nil input", func(t *testing.T) {
+		parsed, err := ParsePublicKey(nil)
+
+		assert.Error(t, err)
+		assert.Nil(t, parsed)
+		assert.Contains(t, err.Error(), "failed to decode pem block")
+	})
+
+	t.Run("malformed pem structure", func(t *testing.T) {
+		parsed, err := ParsePublicKey([]byte(`-----BEGIN PUBLIC KEY-----
+this is not valid base64 data!@#$%
+-----END PUBLIC KEY-----`))
+
+		assert.Error(t, err)
+		assert.Nil(t, parsed)
+	})
+
+	t.Run("wrong content type", func(t *testing.T) {
+		// Valid PEM structure but contains a private key
+		parsed, err := ParsePublicKey([]byte(`-----BEGIN PRIVATE KEY-----
+MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKj
+MzEfYyjiWA4R4/M2bS1GB4t7NXp98C3SC6dVMvDuictGeurT8jNbvJZHtCSuYEvu
+NMoSfm76oqFvAp8Gy0iz5sxjZmSnXyCdPEovGhLa0VzMaQ8s+CLOyS56YyCFGeJZ
+qgtzJ6GR3eqoYSW9b9UMvkBpZODSctWSNGj3P7jRFDO5VoTwCQAWbFnOjDfH5Ulg
+p2PKSQnSJP3AJLQNFNe7br1XbrhV//eO+t51mIpGSDCUv3E0DDFcWDTH9cXDTTlR
+ZVEiR2BwpZOOkE/Z0/BVnhZYL71oZV34bKfWjQIt6V/isSMahdsAASACp4ZTGtwi
+VuNd9tybAgMBAAECggEAHw3MhWrXwPGWFdlv7dXVmBwPCxME9XvlLkm5LYzqGiMU
+h5jPHLqGDtCHKMzM0Fj8qBGBjjOxMSPnQHJMEgxOVpPvP0JQKqTzVcvnVVz1pYQh
+bTp3pLFkFCvdh4MQNuRqvR2iJr4Dz1LhH1jxhpQ1FzLFhZmxJJPxTJTZ7zzVoNPp
+0P6U1pJmMH8cPYQfYRdGqU0FKPDQnPxOJDPQBvLFPwTjLQMvTqVZzRqVZYqYbPVo
+QHZP0qZPvXQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQP
+ZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQ
+PZLMVPwTQHPwQKBgQDqPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZ
+LMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQP
+ZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQ
+PZLMVPwTQHPwQKBgQDMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQ
+HPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwT
+QHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPw
+TQHPwQPZLMVPwTQHPwQKBgHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPw
+QPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHP
+wQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQH
+PwQPZLMVPwTQHPwQAoGAHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQP
+ZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQ
+PZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPw
+QPZLMVPwTQHPwQCgYEAwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLM
+VPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZL
+MVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZLMVPwTQHPwQPZ
+LMVPwTQHPwQ=
+-----END PRIVATE KEY-----`))
+
+		// x509.ParsePKIXPublicKey expects a public key
+		assert.Error(t, err)
+		assert.Nil(t, parsed)
+	})
+
+	t.Run("consistent fingerprint for same key", func(t *testing.T) {
+		parsed1, err1 := ParsePublicKey([]byte(rsaPublicKey))
+		parsed2, err2 := ParsePublicKey([]byte(rsaPublicKey))
+
+		assert.NoError(t, err1)
+		assert.NoError(t, err2)
+		assert.NotNil(t, parsed1)
+		assert.NotNil(t, parsed2)
+		assert.Equal(t, parsed1.Kid, parsed2.Kid)
+	})
+
+	t.Run("different fingerprints for different keys", func(t *testing.T) {
+		parsed1, err1 := ParsePublicKey([]byte(rsaPublicKey))
+		parsed2, err2 := ParsePublicKey([]byte(ecdsaPublicKey))
+
+		assert.NoError(t, err1)
+		assert.NoError(t, err2)
+		assert.NotNil(t, parsed1)
+		assert.NotNil(t, parsed2)
+		assert.NotEqual(t, parsed1.Kid, parsed2.Kid)
+	})
+
+	t.Run("pem with extra whitespace", func(t *testing.T) {
+		parsed, err := ParsePublicKey([]byte("\n\n" + rsaPublicKey + "\n\n"))
+
+		assert.NoError(t, err)
+		assert.NotNil(t, parsed)
+		assert.NotEmpty(t, parsed.Kid)
+		assert.NotNil(t, parsed.Key)
+	})
 }

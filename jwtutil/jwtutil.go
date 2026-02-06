@@ -5,6 +5,9 @@
 package jwtutil
 
 import (
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"slices"
 	"strings"
@@ -32,6 +35,10 @@ type ClaimsPtr[T any] interface {
 	jwt.Claims
 	*T
 }
+
+//
+// Validate token and claims
+//
 
 func Validate[T any, PT ClaimsPtr[T]](opts *ValidateOpts) (*jwt.Token, error) {
 	// Require bearer authorization scheme
@@ -122,4 +129,31 @@ func Validate[T any, PT ClaimsPtr[T]](opts *ValidateOpts) (*jwt.Token, error) {
 	}
 
 	return token, nil
+}
+
+//
+// Parse PEM-encoded PKCS8 public key and calculate fingerprint
+//
+
+type ParsedKey struct {
+	Kid string
+	Key any
+}
+
+func ParsePublicKey(keyPem []byte) (*ParsedKey, error) {
+	pemBlock, _ := pem.Decode(keyPem)
+	if pemBlock == nil {
+		return nil, fmt.Errorf("failed to decode pem block")
+	}
+
+	kid := fmt.Sprintf("%x", sha256.Sum256(pemBlock.Bytes))
+	key, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ParsedKey{
+		Kid: kid,
+		Key: key,
+	}, nil
 }
