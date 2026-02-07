@@ -621,7 +621,7 @@ func TestParsePublicKey(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, parsed)
 			assert.NotEmpty(t, parsed.Kid)
-			assert.NotNil(t, parsed.Key)
+			assert.NotNil(t, parsed.Public)
 
 			// Verify kid
 			assert.Len(t, parsed.Kid, 64)
@@ -728,6 +728,6 @@ LMVPwTQHPwQ=
 		assert.NoError(t, err)
 		assert.NotNil(t, parsed)
 		assert.NotEmpty(t, parsed.Kid)
-		assert.NotNil(t, parsed.Key)
+		assert.NotNil(t, parsed.Public)
 	})
 }

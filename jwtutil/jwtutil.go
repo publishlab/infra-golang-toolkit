@@ -136,8 +136,8 @@ func Validate[T any, PT ClaimsPtr[T]](opts *ValidateOpts) (*jwt.Token, error) {
 //
 
 type ParsedKey struct {
-	Kid string
-	Key any
+	Kid    string
+	Public any
 }
 
 func ParsePublicKey(keyPem []byte) (*ParsedKey, error) {
@@ -153,7 +153,7 @@ func ParsePublicKey(keyPem []byte) (*ParsedKey, error) {
 	}
 
 	return &ParsedKey{
-		Kid: kid,
-		Key: key,
+		Kid:    kid,
+		Public: key,
 	}, nil
 }
