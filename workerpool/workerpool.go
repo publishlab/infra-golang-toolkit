@@ -40,8 +40,6 @@ func (p *WorkerPool) Submit(fn func(done func(err error)) error) {
 
 	// Callback function that signals a job is done
 	done := func(err error) {
-		p.wg.Done()
-
 		p.mu.RLock()
 		closed := p.closed
 		p.mu.RUnlock()
@@ -55,6 +53,7 @@ func (p *WorkerPool) Submit(fn func(done func(err error)) error) {
 			}
 		}
 
+		p.wg.Done()
 	}
 
 	// Run dispatcher function
