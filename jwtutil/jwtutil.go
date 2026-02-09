@@ -82,12 +82,12 @@ func Validate[T any, PT ClaimsPtr[T]](opts *ValidateOpts) (*jwt.Token, error) {
 		}
 
 		if len(audienceClaim) == 0 {
-			return nil, fmt.Errorf("invalid token sub")
+			return nil, fmt.Errorf("invalid token aud")
 		}
 
 		for _, expected := range opts.AssertAudience {
 			if !slices.Contains(audienceClaim, expected) {
-				return nil, fmt.Errorf("invalid token sub")
+				return nil, fmt.Errorf("invalid token aud")
 			}
 		}
 	}
