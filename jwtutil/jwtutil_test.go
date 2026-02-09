@@ -289,7 +289,7 @@ func TestValidateAssertAudience(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, token)
-		assert.Contains(t, err.Error(), "invalid token sub")
+		assert.Contains(t, err.Error(), "invalid token aud")
 	})
 
 	t.Run("empty audience", func(t *testing.T) {
@@ -309,7 +309,7 @@ func TestValidateAssertAudience(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, token)
-		assert.Contains(t, err.Error(), "invalid token sub")
+		assert.Contains(t, err.Error(), "invalid token aud")
 	})
 }
 
