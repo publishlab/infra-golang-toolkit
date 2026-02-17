@@ -624,7 +624,7 @@ func TestParsePublicKey(t *testing.T) {
 			assert.NotNil(t, parsed.Public)
 
 			// Verify kid
-			assert.Len(t, parsed.Kid, 64)
+			assert.Len(t, parsed.Kid, 32)
 			assert.Regexp(t, "^[0-9a-f]+$", parsed.Kid)
 		})
 	}

@@ -5,7 +5,7 @@
 package jwtutil
 
 import (
-	"crypto/sha256"
+	"crypto/md5"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -146,7 +146,7 @@ func ParsePublicKey(keyPem []byte) (*ParsedKey, error) {
 		return nil, fmt.Errorf("failed to decode pem block")
 	}
 
-	kid := fmt.Sprintf("%x", sha256.Sum256(pemBlock.Bytes))
+	kid := fmt.Sprintf("%x", md5.Sum(pemBlock.Bytes))
 	key, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
 	if err != nil {
 		return nil, err
