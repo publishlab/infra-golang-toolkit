@@ -43,6 +43,7 @@ type GetOpts[T any] struct {
 	Key       string
 	TTL       int64
 	Grace     int64
+	NoWait    bool
 	Generator func() (T, error)
 }
 
@@ -245,6 +246,12 @@ func (c *Cache[T]) GetWithOpts(opts *GetOpts[T]) (T, error) {
 	// Complete miss, new cache item
 	if !exists || !working {
 		item = c.createCacheItem(opts)
+	}
+
+	// Optionally return zero value instead of waiting
+	if opts.NoWait {
+		var zero T
+		return zero, nil
 	}
 
 	// Wait for data to be generated

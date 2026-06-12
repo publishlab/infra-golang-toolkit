@@ -131,6 +131,37 @@ func TestCacheGrace(t *testing.T) {
 	assert.Equal(t, d1, d2)
 }
 
+func TestCacheNoWait(t *testing.T) {
+	cache := New[int]()
+	data, err := cache.GetWithOpts(&GetOpts[int]{
+		Key:    "test",
+		TTL:    time.Minute.Nanoseconds(),
+		NoWait: true,
+		Generator: func() (int, error) {
+			time.Sleep(100 * time.Millisecond)
+			return 42, nil
+		},
+	})
+
+	// Expect zero value on first get
+	assert.NoError(t, err)
+	assert.Equal(t, 0, data)
+
+	time.Sleep(200 * time.Millisecond)
+	data, err = cache.GetWithOpts(&GetOpts[int]{
+		Key:    "test",
+		TTL:    time.Minute.Nanoseconds(),
+		NoWait: true,
+		Generator: func() (int, error) {
+			return 0, fmt.Errorf("nope")
+		},
+	})
+
+	// Expect actual value on subsequent get
+	assert.NoError(t, err)
+	assert.Equal(t, 42, data)
+}
+
 func TestCacheSet(t *testing.T) {
 	cache := New[int64]()
 	cache.Set("test", 42)
